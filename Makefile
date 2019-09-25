@@ -3,21 +3,50 @@ PROJ_ROOT 	= $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 MAKEFILE      	= Makefile
 DEL_FILE      	= rm -f
 SRC_DIR		= $(PROJ_ROOT)src
+CITYHASH_SRC_DIR = $(SRC_DIR)/cityhash
 TESTS_SRC_DIR 	= $(PROJ_ROOT)test
 BUILD_DIR	= $(PROJ_ROOT)build
+LIB_BUILD_DIR	= $(BUILD_DIR)/lib
 TESTS_BUILD_DIR = $(PROJ_ROOT)build/test
+
+LIB_SOURCES	= $(wildcard $(SRC_DIR)/*.cpp)
+LIB_OBJS	= $(patsubst $(SRC_DIR)/%.cpp, $(LIB_BUILD_DIR)/.cpp.o%, $(LIB_SOURCES))
+LIB		= $(LIB_BUILD_DIR)/libhashmap.so
+
 TEST_SOURCES	= $(wildcard $(TESTS_SRC_DIR)/*.cpp)
+TESTS_OBJS	= $(patsubst $(TESTS_SRC_DIR)/%.cpp, $(TESTS_BUILD_DIR)/.cpp.o%, $(TEST_SOURCES))
 TESTS 		= $(patsubst $(TESTS_SRC_DIR)/%.cpp, $(TESTS_BUILD_DIR)/%, $(TEST_SOURCES))
+
+CITYHASH_OBJ 	= $(TESTS_BUILD_DIR)/city.cc.o
 
 CXX		= g++
 INCLUDE_DIRS    = $(SRC_DIR)
 CXX_FLAGS	= -std=c++14 -I$(INCLUDE_DIRS) -Wall -g -O3
-# CXX_LFLAGS	= 
+CXX_LFLAGS	= -std=c++14 -Wall -g -O3 -L$(LIB_BUILD_DIR)
 
-tests: tests_clean $(TESTS)
+lib: $(LIB)
 
-$(TESTS_BUILD_DIR)/%: $(TESTS_SRC_DIR)/%.cpp
-	$(CXX) $(CXX_FLAGS) -o $@ $<
+tests: tests_clean $(CITYHASH_OBJ) $(LIB) $(TESTS)
+
+#$(CITYHASH_OBJ):
+$(TESTS_BUILD_DIR)/city.cc.o: $(CITYHASH_SRC_DIR)/city.cc
+	$(CXX) -c $(CXX_FLAGS) -o $@ $<
+
+#$(LIB):
+$(LIB_BUILD_DIR)/libhashmap.so: $(LIB_BUILD_DIR)/%.cpp.o
+	$(CXX) -shared $(CXX_LFLAGS) -o $@ $^
+	
+#$(LIB_OBJS):
+$(LIB_BUILD_DIR)/%.cpp.o: $(SRC_DIR)/%.cpp
+	$(CXX) -c $(CXX_FLAGS) -o $@ $<
+	
+#$(TESTS_OBJS):
+$(TESTS_BUILD_DIR)/%.cpp.o: $(TESTS_SRC_DIR)/%.cpp
+	$(CXX) -c $(CXX_FLAGS) -o $@ $<
+
+#$(TESTS):	
+$(TESTS_BUILD_DIR)/%: $(TESTS_BUILD_DIR)/%.cpp.o $(TESTS_BUILD_DIR)/city.cc.o
+	$(CXX) $(CXX_FLAGS) -o $@ $^
 	@echo 'run a test: ' $@ 
 	@$@
 	@if [[ $$? == 0 ]]; then \
@@ -29,5 +58,8 @@ $(TESTS_BUILD_DIR)/%: $(TESTS_SRC_DIR)/%.cpp
 tests_clean:
 	$(DEL_FILE) $(TESTS_BUILD_DIR)/*
 	
+clean: tests_clean
+	$(DEL_FILE) $(LIB_BUILD_DIR)/*
+
 watch:
 	$(foreach v, $(.VARIABLES), $(info $(v) = $($(v))))
