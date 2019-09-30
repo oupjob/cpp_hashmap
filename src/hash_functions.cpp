@@ -6,13 +6,11 @@ using namespace std;
 
 #define MAX_S_LEN 4096
 
-hash_t cityHashFunction(size_t iModulo, const char* sKey, int ik, int a, int b, int p) 
+hash_t cityHashFunction(size_t iModulo, const char* sKey, size_t ik) 
 {
 	if (!iModulo)
 		iModulo = 7;
-	
-	
-	
+
 	size_t len = strnlen(sKey, MAX_S_LEN);
 	hash_t h = cityHash(sKey, len);
 	
@@ -21,7 +19,7 @@ hash_t cityHashFunction(size_t iModulo, const char* sKey, int ik, int a, int b, 
 
 #undef MAX_S_LEN
 
-hash_t cityHashFunction(size_t iModulo, const std::string& sKey, int ik) 
+hash_t cityHashFunction(size_t iModulo, const std::string& sKey, size_t ik) 
 {
 	if (!iModulo)
 		iModulo = 7;
@@ -36,7 +34,7 @@ hash_t cityHashFunction(size_t iModulo, const std::string& sKey, int ik)
 
 #define MAX_S_LEN 4096
 
-hash_t stdHashFunction(size_t iModulo, const char* sKey, int ik) 
+hash_t stdHashFunction(size_t iModulo, const char* sKey, size_t ik) 
 {
 	if (!iModulo)
 		iModulo = 7;
@@ -55,7 +53,7 @@ hash_t stdHashFunction(size_t iModulo, const char* sKey, int ik)
 
 #undef MAX_S_LEN
 
-hash_t stdHashFunction(size_t iModulo, const std::string& sKey, int ik) {
+hash_t stdHashFunction(size_t iModulo, const std::string& sKey, size_t ik) {
 	const char* pRawKey = sKey.c_str();
 	
 	return stdHashFunction(iModulo, pRawKey, ik);
@@ -63,18 +61,24 @@ hash_t stdHashFunction(size_t iModulo, const std::string& sKey, int ik) {
 
 // Universal hash function for integers: ((ax + b) mod p) mod m for a stepping to ik 
 //  h(x) = (ax + b) mod p, stepping is a (h(x) + ik) mod m 
-hash_t stdHashFunction(size_t iModulo, long long iKey, int ik) {
+hash_t stdHashFunction(size_t iModulo, long long iKey, size_t ik) {
 	if (iModulo == 0)
 		iModulo = 7;
 	
-	return (((DEFAULT_A * iKey + DEFAULT_B) % DEFAULT_P) + ik) % iModulo;
+	hash_t h = (((DEFAULT_A * iKey + DEFAULT_B) % DEFAULT_P) + ik);
+	if (!h) h = 1;
+	
+	return h % iModulo;
 }
 
-hash_t stdHashFunction(size_t iModulo, int iKey, int ik) {
+hash_t stdHashFunction(size_t iModulo, int iKey, size_t ik) {
 	if (iModulo == 0)
 		iModulo = 7;
 	
-	return (((DEFAULT_A * iKey + DEFAULT_B) % DEFAULT_P) + ik) % iModulo;
+	hash_t h = (((DEFAULT_A * iKey + DEFAULT_B) % DEFAULT_P) + ik);
+	if (!h) h = 1;
+	
+	return h % iModulo;
 }
 
 #undef DEFAULT_A

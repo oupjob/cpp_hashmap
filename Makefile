@@ -14,7 +14,7 @@ LIB_OBJS	= $(patsubst $(SRC_DIR)/%.cpp, $(LIB_BUILD_DIR)/%.cpp.o, $(LIB_SOURCES)
 LIB		= $(LIB_BUILD_DIR)/libhashmap.so
 
 TEST_SOURCES	= $(wildcard $(TESTS_SRC_DIR)/*.cpp)
-TESTS_OBJS	= $(patsubst $(TESTS_SRC_DIR)/%.cpp, $(TESTS_BUILD_DIR)/.cpp.o%, $(TEST_SOURCES))
+TESTS_OBJS	= $(patsubst $(TESTS_SRC_DIR)/%.cpp, $(TESTS_BUILD_DIR)/%.cpp.o, $(TEST_SOURCES))
 TESTS 		= $(patsubst $(TESTS_SRC_DIR)/%.cpp, $(TESTS_BUILD_DIR)/%, $(TEST_SOURCES))
 
 CITYHASH_OBJ 	= $(LIB_BUILD_DIR)/city.cc.o

@@ -102,8 +102,8 @@ int main()
 	cout << endl;
 	PRT_RESULTS(iCollisionCount, iHashesSize, stdHashFunction);
 	
-	#define PRT_WIDTH 30
-	#define SEPARATOR ' '
+#define PRT_WIDTH 30
+#define SEPARATOR ' '
 	
 	// print parameters of the test
 	cout 	<< "Test parameters:" << endl << left
@@ -113,6 +113,7 @@ int main()
 			<< endl
 			<< setw(PRT_WIDTH) << "Modules count:" << setfill(SEPARATOR) << nModules << endl;
 			
-	
+#undef PRT_WIDTH
+#undef SEPARATOR
 	return result;
 }

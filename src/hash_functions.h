@@ -23,12 +23,12 @@ typedef unsigned char byte_t;
 #define DEFAULT_P 3571
 #define DEFAULT_IK 0
 
-hash_t cityHashFunction(size_t iModulo, const char* sKey, int ik = DEFAULT_IK);
-hash_t cityHashFunction(size_t iModulo, const std::string& sKey, int ik = DEFAULT_IK);
+hash_t cityHashFunction(size_t iModulo, const char* sKey, size_t ik = DEFAULT_IK);
+hash_t cityHashFunction(size_t iModulo, const std::string& sKey, size_t ik = DEFAULT_IK);
 
-hash_t stdHashFunction(size_t iModulo, const char* sKey, int ik = DEFAULT_IK);
-hash_t stdHashFunction(size_t iModulo, const std::string& sKey, int ik = DEFAULT_IK);
-hash_t stdHashFunction(size_t iModulo, long long iKey, int ik = DEFAULT_IK);
-hash_t stdHashFunction(size_t iModulo, int iKey, int ik = DEFAULT_IK);
+hash_t stdHashFunction(size_t iModulo, const char* sKey, size_t ik = DEFAULT_IK);
+hash_t stdHashFunction(size_t iModulo, const std::string& sKey, size_t ik = DEFAULT_IK);
+hash_t stdHashFunction(size_t iModulo, long long iKey, size_t ik = DEFAULT_IK);
+hash_t stdHashFunction(size_t iModulo, int iKey, size_t ik = DEFAULT_IK);
 
 #endif
