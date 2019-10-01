@@ -28,16 +28,16 @@ int main()
 	
 	bResult = (oHashMap.capacity() == iCapacity * 17);
 	iStatus = (!bResult || !iStatus);
-	PRT_RESULT(bResult, sStatus, " Hash Map capacity is: ", oHashMap.capacity(), iCapacity * 17)
+	PRT_RESULT(bResult, sStatus, "Hash Map capacity is: ", oHashMap.capacity(), iCapacity * 17)
 			
 	bResult = (oHashMap.size() == 16);
 	iStatus = (!bResult || !iStatus);
-	PRT_RESULT(bResult, sStatus, " Hash Map size is: ", oHashMap.size(), 16)
+	PRT_RESULT(bResult, sStatus, "Hash Map size is: ", oHashMap.size(), 16)
 	
 	HashMapInt::EqualRangeType lEqualRange = oHashMap.equalRange(1);
 	bResult = (lEqualRange.size() == 16);
 	iStatus = (!bResult || !iStatus);
-	PRT_RESULT(bResult, sStatus, " Pairs found: ", lEqualRange.size(), 16)
+	PRT_RESULT(bResult, sStatus, "Pairs found: ", lEqualRange.size(), 16)
 	
 	;
 	return iStatus;

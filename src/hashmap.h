@@ -53,7 +53,6 @@ public:
 	typedef PairType&								RefPairType;
 	typedef PairType*								PtrPairType;
 	typedef std::list<PairType> 					EqualRangeType;
-	typedef std::pair<PtrPairType, hash_t>			PairPtr2Hash;
 	
 	typedef std::lock_guard<std::recursive_mutex>	LockGuardType;
 
@@ -76,7 +75,7 @@ private:
 	std::recursive_mutex	m_mRecursiveMutex;
 	
 	void rehash();
-	PairPtr2Hash findPtrToBusyCell(HashFuncArgType tKey, size_t iPos = 0) const;
+	hash_t findHashOfBusyCell(HashFuncArgType tKey, size_t iPos = 0) const;
 	
 	void equalRangeImpl(HashFuncArgType tKey, EqualRangeType& lOut) const;
 	
@@ -121,11 +120,14 @@ template <\
 #define key(pair) pair.first
 #define value(pair) pair.second
 
-#define ptr(pair) pair.first
-#define hash(pair) pair.second
+#define key_ptr(ptr) ptr->first
+#define value_ptr(ptr) ptr->second
 
 #define cell_is_free(cell) !cell
 #define cell_is_busy(cell) cell
+
+#define is_valid_hash(h) h < m_iCapacity
+#define is_invalid_hash(h) h >= m_iCapacity
 
 HM_TEMPLATE_DEF THashMap::HashMap() 
 {
@@ -186,8 +188,7 @@ bool THashMap::isDefaultPair(RefPairType oPair, RefPairType oDefaultPair)
 }
 
 HM_TEMPLATE_DEF 
-typename THashMap::PairPtr2Hash 
-THashMap::findPtrToBusyCell(const typename THashMap::HashFuncArgType tKey, size_t iPos) const
+hash_t THashMap::findHashOfBusyCell(const typename THashMap::HashFuncArgType tKey, size_t iPos) const
 {
 	LockGuardType oLock(const_cast<std::recursive_mutex&>(m_mRecursiveMutex));
 	
@@ -197,7 +198,7 @@ THashMap::findPtrToBusyCell(const typename THashMap::HashFuncArgType tKey, size_
 	size_t ik = 0;
 	hash_t h;
 	
-	if (iPos >= m_iSize + 1) return PairPtr2Hash(nullptr, m_iCapacity + 1);
+	if (iPos >= m_iSize + 1) return m_iCapacity;
 		
 	while(true) {
 		// ik == 1
@@ -206,15 +207,15 @@ THashMap::findPtrToBusyCell(const typename THashMap::HashFuncArgType tKey, size_
 		pLast = m_vHashTable[h];
 		
 		if (ik >= m_iSize)
-			return PairPtr2Hash(nullptr, h);
+			return m_iCapacity;
 		
 		if (pLast) { 
 			if (key((*pLast)) == tKey) {
 				++iHits;
 				if (iHits > iPos) {
-					return PairPtr2Hash(nullptr, h);
+					return m_iCapacity;
 				} else if (iHits == iPos) {
-					return PairPtr2Hash(pLast, h);
+					return h;
 				} else {
 					++ik;
 					continue;
@@ -224,7 +225,7 @@ THashMap::findPtrToBusyCell(const typename THashMap::HashFuncArgType tKey, size_
 				continue;
 			}
 		} else {
-			return PairPtr2Hash(nullptr, h);
+			return m_iCapacity;
 		}
 	}
 }
@@ -235,9 +236,9 @@ THashMap::find(
 	THashMap::HashFuncArgType tKey, THashMap::ConstRefPairType oDefault, size_t iPos
 ) const 
 {
-	const PairPtr2Hash oPair = findPtrToBusyCell(tKey, iPos);
-	if (ptr(oPair) && key((*ptr(oPair))) == tKey) {
-		return *(ptr(oPair));
+	hash_t h = findHashOfBusyCell(tKey, iPos);
+	if (is_valid_hash(h) && key_ptr(m_vHashTable[h]) == tKey) {
+		return *m_vHashTable[h];
 	} else {
 		return oDefault;
 	}
@@ -253,11 +254,11 @@ void THashMap::equalRangeImpl(
 	size_t iPos = 0;
 	
 	while(true) {
-		PairPtr2Hash oPtrToHash = findPtrToBusyCell(tKey, iPos);
-		if (!ptr(oPtrToHash) || key((*ptr(oPtrToHash))) != tKey)
+		hash_t h = findHashOfBusyCell(tKey, iPos);
+		if (is_invalid_hash(h) || key_ptr(m_vHashTable[h]) != tKey)
 			return;
 		
-		lOut.push_back(*(ptr(oPtrToHash)));
+		lOut.push_back(*m_vHashTable[h]);
 		++iPos;
 	}
 }
@@ -315,11 +316,11 @@ THashMap::remove(const typename THashMap::HashFuncArgType tKey, typename THashMa
 {
 	LockGuardType oLock(m_mRecursiveMutex);
 	
-	PairPtr2Hash oPtrToHash = findPtrToBusyCell(tKey, iPos);
-	if (ptr(oPtrToHash)) {
-		PairType oPair(*ptr(oPtrToHash));
-		delete m_vHashTable[hash(oPtrToHash)];
-		m_vHashTable[hash(oPtrToHash)] = nullptr;
+	hash_t h = findHashOfBusyCell(tKey, iPos);
+	if (is_valid_hash(h)) {
+		PairType oPair(*m_vHashTable[h]);
+		delete m_vHashTable[h];
+		m_vHashTable[h] = nullptr;
 		--m_iSize;
 		return oPair;
 	}
