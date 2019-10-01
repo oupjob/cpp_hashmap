@@ -198,10 +198,23 @@ int main()
 	
 	HashMapInt oHashMap;
 	
+	oHashMap.insert(2, 2);
+	oHashMap.insert(2, 2);
+	oHashMap.insert(2, 2);
+	oHashMap.insert(2, 2);
+	
+	cout << "NOTE:    " << "Check find after inserts in empty map" << endl;
+	
+	bResult = checkFind(2, 4, oHashMap) && bResult;
+	bResult = checkEqualRange(2, 4, oHashMap) && bResult;
+	bResult = checkAccessOperator(2, 4, oHashMap) && bResult;
+	
 	insertKeysWithCollisionsAndFillInHashMap(oHashMap, 10, 5, 200);
 	insertKeysWithCollisionsAndFillInHashMap(oHashMap, 20, 3, 500);
 	insertKeysWithCollisionsAndFillInHashMap(oHashMap, 30, 8, 300);
 	insertKeysWithCollisionsAndFillInHashMap(oHashMap, 1, 32, 300);
+	
+	cout << "NOTE:    " << "Check find after insert and extend in non empty map" << endl;
 	
 	bResult = checkFind(10, 5, oHashMap) && bResult;
 	bResult = checkFind(20, 3, oHashMap) && bResult;

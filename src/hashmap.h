@@ -317,7 +317,7 @@ THashMap::remove(const typename THashMap::HashFuncArgType tKey, typename THashMa
 	
 	PairPtr2Hash oPtrToHash = findPtrToBusyCell(tKey, iPos);
 	if (ptr(oPtrToHash)) {
-		PtrType oPair(*ptr(oPtrToHash));
+		PairType oPair(*ptr(oPtrToHash));
 		delete m_vHashTable[hash(oPtrToHash)];
 		m_vHashTable[hash(oPtrToHash)] = nullptr;
 		--m_iSize;
