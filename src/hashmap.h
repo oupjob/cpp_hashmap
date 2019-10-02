@@ -8,9 +8,6 @@
 #include <mutex>
 #include <cmath>
 
-#include <iostream>
-#include <iomanip>
-
 #include "hash_functions.h"
 
 template <typename KeyT> struct HashMapKeyTypeTraits
@@ -112,19 +109,6 @@ public:
 	bool		isDefaultPair(RefPairType oPair, RefPairType oDefaultPair);
 	
 	void clear();
-	void dump(const std::string& desc) 
-	{
-		std::cout << desc << std::endl;
-		for(size_t i = 0; i < m_iCapacity; ++i)
-		{
-			std::cout 	<< std::left << std::setw(16) << i; 
-			if (!m_vHashTable[i]) {
-				std::cout << 0 << std::endl;
-			} else {
-				std::cout << "(" << m_vHashTable[i]->first << ", " << m_vHashTable[i]->second << ")" << std::endl;
-			}
-		}
-	}
 };
 
 #define HM_TEMPLATE_DEF \
@@ -213,47 +197,25 @@ hash_t THashMap::findHashOfBusyCell(const typename THashMap::HashFuncArgType tKe
 	
 	PairType* pLast = nullptr;
 	size_t iHits = 0;
-	size_t ik = 0;
 	hash_t h;
-		
-// 	std::cout << "find(key=" << tKey << ", pos=" << iPos << ")" << std::endl;
-	
+			
 	if (iPos >= m_iSize) return m_iCapacity;
 	++iPos;	
 	
-	while(true) {
-		// ik == 1
-		// h(x) = (ax + b) mod p => (h(x) + ik+m) mod m = (h(x) + ik) mod m 
+	for(size_t ik = 0; ik < m_iCapacity; ++ik)
+	{
 		h = hashFunction(m_iCapacity, tKey, ik);
-		pLast = m_vHashTable[h];
-		
-		if (ik >= m_iCapacity)
-			return m_iCapacity;
-		
-		if (pLast) { 
-			if (key_ptr(pLast) == tKey) {
-				++iHits;
-// 				std::cout 	<< " h=" << h << ", ik=" << ik 
-// 							<< ", pkey=" << m_vHashTable[h]->first << ", pval=" << m_vHashTable[h]->second
-// 							<< ", hits=" << iHits
-// 							<< std::endl;
-				if (iHits > iPos) {
-					return m_iCapacity;
-				} else if (iHits == iPos) {
-					return h;
-				} else {
-					++ik;
-					continue;
-				}
-			} else {
-				++ik;
-				continue;
-			}
-		} else {
-			++ik;
+		if (cell_is_free(m_vHashTable[h]) || key_ptr(m_vHashTable[h]) != tKey)
 			continue;
+		
+		++iHits;
+		
+		if (iHits == iPos) {
+			return h;
 		}
 	}
+	
+	return m_iCapacity;
 }
 
 HM_TEMPLATE_DEF
@@ -276,7 +238,7 @@ size_t THashMap::equalRangeImpl(typename THashMap::HashFuncArgType tKey, typenam
 	LockGuardType oLock(const_cast<std::recursive_mutex&>(m_mRecursiveMutex));
 	
 	size_t ik = 0;
-	for(; ik < m_iSize; ++ik) {
+	for(; ik < m_iCapacity; ++ik) {
 		hash_t h = hashFunction(m_iCapacity, tKey, ik);
 		if (cell_is_free(m_vHashTable[h]) || key_ptr(m_vHashTable[h]) != tKey)
 			continue;
@@ -299,7 +261,7 @@ size_t THashMap::equalRangeImplForPos(
 	
 	++iPos;
 	size_t ik = 0, iHits = 0;
-	for(; ik < m_iSize; ++ik) {
+	for(; ik < m_iCapacity; ++ik) {
 		hash_t h = hashFunction(m_iCapacity, tKey, ik);
 		if (cell_is_free(m_vHashTable[h]) || key_ptr(m_vHashTable[h]) != tKey)
 			continue;
@@ -353,12 +315,10 @@ void THashMap::insert(const typename THashMap::HashFuncArgType tKey, typename TH
 	
 	while(true) 
 	{
-		for(size_t ik = 0; ik <= m_iSize; ++ik) 
+		for(size_t ik = 0; ik < m_iCapacity; ++ik) 
 		{
 			h = hashFunction(m_iCapacity, tKey, ik);
-// 			std::cout << " h=" << h << "ik=" << ik << std::endl;
-			if (!m_vHashTable[h]) {
-// 				std::cout << " inserted at " << h << std::endl;
+			if (cell_is_free(m_vHashTable[h])) {
 				m_vHashTable[h] = new PairType(tKey, tValue);
 				++m_iSize;
 				return;

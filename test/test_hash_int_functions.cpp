@@ -48,6 +48,8 @@ int main()
 	bool bResult = true;
 	std::string sStatus;
 	
+	cout << "Please, wait a few second ..." << endl;
+	
 	// calaculate hashes
 	std::random_device oRandom;
 	size_t nModules = 64;
