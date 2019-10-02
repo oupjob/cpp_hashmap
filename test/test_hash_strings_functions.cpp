@@ -144,12 +144,12 @@ int main()
 		do {
 			it_j = std::find(std::next(it_j), it_end, *it_i);
 			if (it_j != it_end) {
-				cout << "Collision (Hash Value = " << it_i->m_iHashValue << ") found between <" 
-				<< vFnNames[it_i->m_kFuncType] << "(Modulo=" << it_i->m_iModulo << ", Key=" << vStrs[it_i->m_iVKeysIndex] << ")"
-				<< "> and <" 
-				<< vFnNames[it_j->m_kFuncType] << "(Modulo=" << it_j->m_iModulo << ", Key=" << vStrs[it_j->m_iVKeysIndex] << ")"
-				<< ">"
-				<< endl;
+// 				cout << "Collision (Hash Value = " << it_i->m_iHashValue << ") found between <" 
+// 				<< vFnNames[it_i->m_kFuncType] << "(Modulo=" << it_i->m_iModulo << ", Key=" << vStrs[it_i->m_iVKeysIndex] << ")"
+// 				<< "> and <" 
+// 				<< vFnNames[it_j->m_kFuncType] << "(Modulo=" << it_j->m_iModulo << ", Key=" << vStrs[it_j->m_iVKeysIndex] << ")"
+// 				<< ">"
+// 				<< endl;
 				
 				if (it_i->m_kFuncType == HashDescription::kCityHash)
 					iCityHashCollisionCount++;

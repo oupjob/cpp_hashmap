@@ -3,6 +3,7 @@
 #include <cmath>
 #include <random>
 #include <algorithm>
+#include <limits>
 
 using namespace std;
 
@@ -23,10 +24,22 @@ typedef HashMapInt::PairType 				PairType;
 
 #define OUT_MSG_PREFIX(func) "Checking `" func "` key=" << iKey << ": "
 
+
+#define PRT_RESULT(b_result, s_status, fn_name, key, value, expected_value)\
+s_status = bResult ? " SUCCESS: " : " FAIL:    "; \
+cout 	<< s_status << "Checking `" << fn_name << "`, key=" << key << ": " \
+		<< "expected " << expected_value << " or more pairs, " << value << " found" \
+		<< endl;
+		
+#define PRT_FAIL_SIZE_EQ(fn_name, key, value, expected_value) \
+cout 	<< "FAIL:    " << "Checking `" << fn_name << "`, key=" << key << ": " \
+		<< " expected " << expected_value << " or more pairs, Hash Map size = " << value << " found" << endl;
+
 bool checkFind(int iKey, size_t iExpextedCount, const HashMapInt& oHashMap)
 {
 	bool 		bResult = true;
 	size_t 		iPos = 0;
+	string		sStatus;
 	
 	HashMapInt::PairType oDefaultPair(0, 0);
 	
@@ -43,21 +56,13 @@ bool checkFind(int iKey, size_t iExpextedCount, const HashMapInt& oHashMap)
 		}
 	}
 	
-	if (iPos == (oHashMap.size() - 1)) {
-		cout 	<< "FAIL:    " << OUT_MSG_PREFIX("find()") 
-				<< " expected " << iExpextedCount << " or more pairs, Hash Map size = " << iPos << " found" << endl;
-		return false;
-	}
+// 	if (iPos == (oHashMap.size() - 1)) {
+// 		PRT_FAIL_SIZE_EQ("find()", iKey, iPos, iExpextedCount)
+// 		return false;
+// 	}
 	
-	if (iPos < iExpextedCount) {
-		cout 	<< "FAIL:    " << OUT_MSG_PREFIX("find()") 
-				<< "expected " << iExpextedCount << " or more pairs, " << iPos << " found" << endl;
-		bResult = false;
-	} else {
-		cout 	<< "SUCCESS: " << OUT_MSG_PREFIX("find()")  
-				<< "expected " << iExpextedCount << " or more pairs, " << iPos << " found" << endl;
-		bResult = true;
-	}
+	bResult = iPos >= iExpextedCount;
+	PRT_RESULT(bResult, sStatus, "find()", iKey, iPos, iExpextedCount);
 	
 	return bResult;
 }
@@ -70,33 +75,26 @@ bool checkEqualRange(int iKey, size_t iExpextedCount, const HashMapInt& oHashMap
 		it_i 	= lEqualRange.begin(),
 		it_end 	= lEqualRange.end();
 	size_t iCount = 0;
+	string sStatus;
 	
 	for(; it_i != it_end; ++it_i)
 	{
-		if (it_i->first != iKey) {
-			cout 	<< "FAIL: 	" << OUT_MSG_PREFIX("equalRange()") 
-					<< " incorrect pair found: (" << it_i->first << ", " << it_i->second << ")" << endl;
+		if ((*it_i)->first != iKey) {
+			cout << "FAIL:     incorrect pair found: (" << (*it_i)->first << ", " << (*it_i)->second << ")" << endl;
 			bResult = false;
 		}
 		
 		++iCount;
 	}
 	
-	if (iCount == (oHashMap.size() - 1)) {
-		cout 	<< "FAIL:    " << OUT_MSG_PREFIX("equalRange()") 
-				<< " expected " << iExpextedCount << " or more pairs, Hash Map size = " << iCount << " found" << endl;
-		return false;
-	}
+// 	if (iCount == (oHashMap.size() - 1)) {
+// 		cout 	<< "FAIL:    " << OUT_MSG_PREFIX("equalRange()") 
+// 				<< " expected " << iExpextedCount << " or more pairs, Hash Map size = " << iCount << " found" << endl;
+// 		return false;
+// 	}
 	
-	if (iCount < iExpextedCount) {
-		cout 	<< "FAIL:    " << OUT_MSG_PREFIX("equalRange()") 
-				<< "expected " << iExpextedCount << " or more pairs, " << iCount << " found" << endl;
-		bResult = false;
-	} else {
-		cout 	<< "SUCCESS: " << OUT_MSG_PREFIX("equalRange()")  
-				<< "expected " << iExpextedCount << " or more pairs, " << iCount << " found" << endl;
-		bResult = true;
-	}
+	bResult = iCount >= iExpextedCount;
+	PRT_RESULT(bResult, sStatus, "equalRange()", iKey, iCount, iExpextedCount);
 	
 	return bResult;
 }
@@ -109,32 +107,25 @@ bool checkAccessOperator(int iKey, size_t iExpextedCount, const HashMapInt& oHas
 		it_i 	= lEqualRange.begin(),
 		it_end 	= lEqualRange.end();
 	size_t iCount = 0;
+	string sStatus;
 	
 	for(; it_i != it_end; ++it_i)
 	{
-		if (it_i->first != iKey) {
-			cout << "FAIL:     incorrect pair found: (" << it_i->first << ", " << it_i->second << ")" << endl;
+		if ((*it_i)->first != iKey) {
+			cout << "FAIL:     incorrect pair found: (" << (*it_i)->first << ", " << (*it_i)->second << ")" << endl;
 			bResult = false;
 		}
 		
 		++iCount;
 	}
 	
-	if (iCount == (oHashMap.size() - 1)) {
-		cout 	<< "FAIL:    " << OUT_MSG_PREFIX("operator []") 
-				<< " expected " << iExpextedCount << " or more pairs, Hash Map size = " << iCount << " found" << endl;
-		return false;
-	}
+// 	if (iCount == (oHashMap.size() - 1)) {
+// 		PRT_FAIL_SIZE_EQ("operator []", iKey, iCount, iExpextedCount)
+// 		return false;
+// 	}
 	
-	if (iCount < iExpextedCount) {
-		cout 	<< "FAIL:    " << OUT_MSG_PREFIX("operator []") 
-				<< "expected " << iExpextedCount << " or more pairs, " << iCount << " found" << endl;
-		bResult = false;
-	} else {
-		cout 	<< "SUCCESS: " << OUT_MSG_PREFIX("operator []")  
-				<< "expected " << iExpextedCount << " or more pairs, " << iCount << " found" << endl;
-		bResult = true;
-	}
+	bResult = iCount >= iExpextedCount;
+	PRT_RESULT(bResult, sStatus, "operator []", iKey, iCount, iExpextedCount);
 	
 	return bResult;
 }
@@ -145,7 +136,7 @@ int collisionForKey(int iKey, size_t iModulo, int i) {
 	return iKey + i * iModulo;
 }
 
-#define DEFAULT_CAPACITY 128
+#define DEFAULT_CAPACITY 127
 
 void insertKeysWithCollisionsAndFillInHashMap(HashMapInt& rHashMap, int iCollisionedKey, size_t nKeyInsertCount, size_t nFillCount)
 {	
@@ -197,17 +188,28 @@ int main()
 	bool 		bResult = true;
 	
 	HashMapInt oHashMap;
+	HashMapInt::PairType oDefaultPair(0, 0);
 	
 	oHashMap.insert(2, 2);
-	oHashMap.insert(2, 2);
-	oHashMap.insert(2, 2);
-	oHashMap.insert(2, 2);
+	oHashMap.insert(2, 20);
+	oHashMap.insert(HashMapInt::PairType(2, 200));
+	oHashMap.insert(HashMapInt::PairType(2, 2000));
 	
-	cout << "NOTE:    " << "Check find after inserts in empty map" << endl;
+	oHashMap.insert(6, 6);
+	
+	cout << "NOTE:    " << "Checking find after inserts in empty map" << endl;
 	
 	bResult = checkFind(2, 4, oHashMap) && bResult;
 	bResult = checkEqualRange(2, 4, oHashMap) && bResult;
 	bResult = checkAccessOperator(2, 4, oHashMap) && bResult;
+	
+	cout << "NOTE:    " << "Checking find after remove inserted in empty map" << endl;
+	for(int i = 4; i >= 1; --i) {
+		oHashMap.remove(2, oDefaultPair, 0);
+		bResult = checkFind(2, i - 1, oHashMap) && bResult;
+		bResult = checkEqualRange(2, i - 1, oHashMap) && bResult;
+		bResult = checkAccessOperator(2, i - 1, oHashMap) && bResult;
+	}
 	
 	insertKeysWithCollisionsAndFillInHashMap(oHashMap, 10, 5, 200);
 	insertKeysWithCollisionsAndFillInHashMap(oHashMap, 20, 3, 500);

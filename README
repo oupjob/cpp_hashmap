@@ -1,1 +1,47 @@
+DESCRIPTION:
+
+Implementation of the template class HashMap <KeyT, T, hashFunction> in C ++.
+KeyT - key type
+T - value type
+hashFunction - hash function
+
+- Provides the ability to store <key, value> pairs in a hash table, possibly several elements with the same key (as in std :: unordered_multimap).
+- An Open Addressing Algorithm is used to organize a hash table .
+- Inserting and removing for O(n) time.
+- Searching for one element in O(n) time, a set of elements with the same keys in O(n) time.
+- Extension with rehasing in O(n) time, without calling the copy and key copy constructors.
+- Thread safety (not yet verified)
+- Unit tests
+- Implementation allows you to set the used hash function as a template parameter.
+
+REQUIREMENTS FOR TYPES:
+
+- For KeyT operator "==" must be defined
+- KeyT and T - must have a copy constructor (to search for equalRange and [])
+- hashFunction - a function that takes three parameters input 
+	std::size_t 	- dividend
+	KeyT 			- key
+	std::size_t 	- step
+  and return std::size_t - hash of key
+
+INSTRUCTIONS:
+
+To build the library:
+ make lib
+ 
+To build tests: (library will builded with them)
+ make tests
+ 
+To run the tests:
+ make check or ./run_tests.sh in the project root directory
+ 
+To run a specific test, go to the "./build/test" directory and execute the executable file you need.
+ 
+Cleaning:
+ make clean - deletes all compiled binary files.
+ make tests_clean - deletes all compiled binary files for tests.
+ 
+SEE ALSO:
+
+ README_RU.md
 

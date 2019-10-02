@@ -24,10 +24,14 @@ INCLUDE_DIRS    = $(SRC_DIR)
 CXX_FLAGS	= -std=c++14 -I$(INCLUDE_DIRS) -Wextra -g -O3
 CXX_LFLAGS	= -std=c++14 -Wall -g -O3 -L$(LIB_BUILD_DIR) -lhashmap
 CXX_FLAGS_LIBHM = -std=c++14 -Wall -g -O3
+	
+build_dirs:
+	mkdir -p $(LIB_BUILD_DIR)
+	mkdir -p $(TESTS_BUILD_DIR)
 
-lib: $(LIB)
+lib: build_dirs $(LIB)
 
-tests: tests_clean $(CITYHASH_OBJ) lib $(TESTS) 
+tests: build_dirs $(CITYHASH_OBJ) lib $(TESTS) 
 	
 #$(CITYHASH_OBJ):
 $(LIB_BUILD_DIR)/city.cc.o: $(CITYHASH_SRC_DIR)/city.cc
@@ -60,6 +64,9 @@ $(TESTS_BUILD_DIR)/%: $(TESTS_BUILD_DIR)/%.cpp.o $(LIB_BUILD_DIR)/city.cc.o
 # 		echo "Test: '`basename $@`' Failed!"; \
 # 	fi
 # 	@echo
+
+check: tests
+	$(PROJ_ROOT)/run_tests.sh from_makefile
 	
 tests_clean:
 	$(DEL_FILE) $(TESTS_BUILD_DIR)/*
