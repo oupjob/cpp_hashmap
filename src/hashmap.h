@@ -310,9 +310,7 @@ void THashMap::insert(const typename THashMap::HashFuncArgType tKey, typename TH
 {
 	LockGuardType oLock(m_mRecursiveMutex);
 	hash_t h;
-	
-// 	std::cout << "insert(key=" << tKey << ", value=" << tValue << ")" << std::endl;
-	
+		
 	while(true) 
 	{
 		for(size_t ik = 0; ik < m_iCapacity; ++ik) 
