@@ -1,2 +1,6 @@
 Добавить в test_hash_*_functions.cpp проверку характеристики функции (хорошая или плохая) по кол-ву коллизий/тестовое множество
 В  test_hash_string_functions.cpp поменять тестовое множество задаваемое вручную на генерируемое
+
+test_hashmap_access, test_hashmap_access_order - добавить проверку equalRange при iPos > 0 И nCount = 0
+
+test_hashmap_insert_remove - переделаать проверку удаленных значений, после удаления найти их при помощи equalRange

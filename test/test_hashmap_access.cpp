@@ -87,12 +87,6 @@ bool checkEqualRange(int iKey, size_t iExpextedCount, const HashMapInt& oHashMap
 		++iCount;
 	}
 	
-// 	if (iCount == (oHashMap.size() - 1)) {
-// 		cout 	<< "FAIL:    " << OUT_MSG_PREFIX("equalRange()") 
-// 				<< " expected " << iExpextedCount << " or more pairs, Hash Map size = " << iCount << " found" << endl;
-// 		return false;
-// 	}
-	
 	bResult = iCount >= iExpextedCount;
 	PRT_RESULT(bResult, sStatus, "equalRange()", iKey, iCount, iExpextedCount);
 	

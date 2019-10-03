@@ -7,6 +7,7 @@
 #include <cstring>
 #include <mutex>
 #include <cmath>
+#include <shared_ptr>
 
 #include "hash_functions.h"
 
@@ -39,34 +40,25 @@ template <
 class HashMap 
 {
 public:
-	typedef T*										PtrType;
-	typedef T&										RefType;
-	
 	typedef HashMapKeyTypeTraits<KeyT>				KeyTypeTraits;			
-	typedef typename KeyTypeTraits::PtrKeyType		PtrKeyType;
-	typedef typename KeyTypeTraits::RefKeyType		RefKeyType;
 	typedef typename KeyTypeTraits::HashFuncArgType HashFuncArgType;
 	
 	typedef std::pair<KeyT, T> 						PairType;
-	typedef PairType&								RefPairType;
-	typedef PairType*								PtrPairType;
 	
-	typedef typename KeyTypeTraits::ConstPtrKeyType	ConstPtrKeyType;
-	typedef typename KeyTypeTraits::ConstRefKeyType ConstRefKeyType;
-	typedef const T*								ConstPtrType;
-	typedef const T&								ConstRefType;
+	typedef std::shared_ptr<PairType>				SharedPtrPairType;
+	typedef const SharedPtrPairType					ConstSharedPtrPairType;
 	
-	typedef const PairType&							ConstRefPairType;
 	typedef const PairType*							ConstPtrPairType;
 	
-	typedef std::list<ConstPtrPairType> 			EqualRangeType;
-	typedef std::list<hash_t>						EqualRangeIndexListType;
+	typedef std::list<ConstSharedPtrPairType> 		EqualRangeType;
 	
-	typedef std::list<PtrPairType>					DanglingChainRangeType;
-	typedef PairType**								HashTableType;
+	typedef std::list<SharedPtrPairType>			DanglingChainRangeType;
 	
 	typedef std::shared_lock<std::shared_mutex>		ReadLockType;
 	typedef std::lock_guard<std::shared_mutex>		WriteLockType;
+	
+	typedef std::shared_ptr<PairType>*				HashTableType;
+
 	
 private:
 	HashTableType			m_vHashTable;
@@ -91,7 +83,7 @@ public:
 	HashMap(const HashMap<KeyT, T, hashFunction>& oSrc);
 	~HashMap();
 	
-	ConstRefPairType find(HashFuncArgType tKey, ConstRefPairType oDefaultPair, size_t iPos = 0) const;
+	ConstSharedPtrPairType find(HashFuncArgType tKey, ConstRefPairType oDefaultPair, size_t iPos = 0) const;
 	
 	EqualRangeType operator [] (HashFuncArgType tKey) const;
 	EqualRangeType equalRange(HashFuncArgType tKey, size_t iPos=0, size_t nCount=0) const;
