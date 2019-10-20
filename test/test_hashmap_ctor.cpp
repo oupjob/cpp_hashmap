@@ -60,9 +60,9 @@ int main()
 	oHashMap2.clear();
 	iSize = oHashMap2.size();
 	iCapacity = oHashMap2.capacity();
-	bResult = (iSize == 0 && iCapacity == 0);
+	bResult = (iSize == 0 && iCapacity == 127);
 	iStatus = (!bResult || iStatus);
-	CHK_PRT_SZ_CP_RESULT("Test Source HashMap clean() method: ", bResult, iStatus, iSize, iCapacity, 0, 0)
+	CHK_PRT_SZ_CP_RESULT("Test Source HashMap clear() method: ", bResult, iStatus, iSize, iCapacity, 0, 127)
 	
 	cout << "NOTE:    " << "Checking that the copy does not reference the source hash table" << endl;
 	iSize = oHashMap3.size();

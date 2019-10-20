@@ -21,9 +21,9 @@ CITYHASH_OBJ 	= $(LIB_BUILD_DIR)/city.cc.o
 
 CXX		= g++
 INCLUDE_DIRS    = $(SRC_DIR)
-CXX_FLAGS	= -std=c++17 -I$(INCLUDE_DIRS) -Wextra -g -O3
-CXX_LFLAGS	= -std=c++17 -Wall -g -O3 -L$(LIB_BUILD_DIR) -lhashmap
-CXX_FLAGS_LIBHM = -std=c++17 -Wall -g -O3
+CXX_FLAGS	= -std=c++17 -I$(INCLUDE_DIRS) -Wextra -g -O0
+CXX_LFLAGS	= -std=c++17 -Wall -g -O0 -L$(LIB_BUILD_DIR) -lhashmap -lpthread
+CXX_FLAGS_LIBHM = -std=c++17 -Wall -g -O0 -lpthread
 	
 build_dirs:
 	mkdir -p $(LIB_BUILD_DIR)

@@ -79,7 +79,7 @@ int main()
 		}
 		bResult = bFindResult && bResult;
 		
- 		lEqualRange = oHashMap[i];
+ 		lEqualRange = oshMap[i];
 		it_er_end = lEqualRange.end();
 		for(it_er = lEqualRange.begin(), iPos = 0; it_er != lEqualRange.end(); ++it_er, ++iPos)
 		{

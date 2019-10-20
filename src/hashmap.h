@@ -6,7 +6,9 @@
 #include <utility>
 #include <cstring>
 #include <mutex>
+#include <shared_mutex>
 #include <cmath>
+#include <memory>
 
 #include "hash_functions.h"
 
@@ -29,6 +31,17 @@ template <> struct HashMapKeyTypeTraits<int>
 	typedef int					HashFuncArgType;
 };
 
+// template <typename KeyT, typename T> struct PtrAllocTraits
+// {
+// 	typedef std::pair<KeyT, T> 		PairType;
+// 	typedef PairType*				
+// };
+// 
+// template <typename AllocTraits = PtrAllocTraits> class SharedPtrAllocator
+// {
+// 	
+// }
+
 #define DEFAULT_CAPACITY 127 
 
 template <
@@ -39,76 +52,81 @@ template <
 class HashMap 
 {
 public:
-	typedef T*										PtrType;
-	typedef T&										RefType;
-	
 	typedef HashMapKeyTypeTraits<KeyT>				KeyTypeTraits;			
-	typedef typename KeyTypeTraits::PtrKeyType		PtrKeyType;
-	typedef typename KeyTypeTraits::RefKeyType		RefKeyType;
 	typedef typename KeyTypeTraits::HashFuncArgType HashFuncArgType;
 	
 	typedef std::pair<KeyT, T> 						PairType;
 	typedef PairType&								RefPairType;
-	typedef PairType*								PtrPairType;
+	typedef const PairType&							ConstRefPairType;
 	
-	typedef typename KeyTypeTraits::ConstPtrKeyType	ConstPtrKeyType;
-	typedef typename KeyTypeTraits::ConstRefKeyType ConstRefKeyType;
-	typedef const T*								ConstPtrType;
+	typedef T&										RefType;
 	typedef const T&								ConstRefType;
 	
-	typedef const PairType&							ConstRefPairType;
-	typedef const PairType*							ConstPtrPairType;
+	typedef std::shared_ptr<PairType>				SharedPtrPairType;
+	typedef std::shared_ptr<const PairType>			ConstSharedPtrPairType;
+	typedef std::weak_ptr<PairType>					WeakPtrPairType;
+	typedef std::weak_ptr<const PairType>			ConstWeakPtrPairType;
+	typedef const WeakPtrPairType&					ConstRefWeakPtrPairType;
 	
-	typedef std::list<ConstPtrPairType> 			EqualRangeType;
-	typedef std::list<hash_t>						EqualRangeIndexListType;
-	
-	typedef std::list<PtrPairType>					DanglingChainRangeType;
-	typedef PairType**								HashTableType;
+	typedef std::list<WeakPtrPairType> 				EqualRangeType;
+	typedef std::list<SharedPtrPairType>			DanglingChainRangeType;
 	
 	typedef std::shared_lock<std::shared_mutex>		ReadLockType;
 	typedef std::lock_guard<std::shared_mutex>		WriteLockType;
 	
-private:
-	HashTableType			m_vHashTable;
-	size_t					m_iCapacity;
-	std::shared_mutex		m_mSharedMutex;
+	typedef std::shared_ptr<PairType>*				HashTableType;
+
 	
-	hash_t firstIndex();
-	hash_t lastIndex();
+protected:
+	HashTableType				m_vHashTable;
+	size_t						m_nCapacity;
+	mutable std::shared_mutex	m_mSharedMutex;
 	
-	hash_t findHashOfBusyCell(HashFuncArgType tKey, size_t iPos = 0) const;
+	virtual hash_t firstIndex() const;
+	virtual hash_t lastIndex() const;
 	
-	size_t equalRangeImpl(HashFuncArgType tKey, EqualRangeType& lOut) const;
-	size_t equalRangeImplForPos(HashFuncArgType tKey, size_t iPos, size_t nCount, EqualRangeType& lOut) const;	
+	virtual inline hash_t findHashOfBusyCell(HashFuncArgType tKey, size_t iPos) const;
+	virtual inline ConstRefPairType findImpl(HashFuncArgType tKey, ConstRefPairType oDefaultPair, size_t iPos = 0) const;
 	
-	void buildDanglingChain(DanglingChainRangeType& out);
+	virtual inline size_t equalRangeImpl(HashFuncArgType tKey, EqualRangeType& lOut) const;
+	virtual inline size_t equalRangeImplForPos(HashFuncArgType tKey, size_t iPos, size_t nCount, EqualRangeType& lOut) const;
 	
-	void extendImpl(const size_t iNewCapacity);
+	virtual inline void insertImpl(HashFuncArgType tKey, ConstRefType tValue);
+	virtual inline void removeImpl(HashFuncArgType tKey, size_t iPos, size_t nCount, EqualRangeType& lOut);
+	
+	virtual inline void extendImpl(const size_t iNewCapacity);
+	virtual void restoreDanglingChain(DanglingChainRangeType& out);
+	
+	virtual inline  bool emptyImpl() const;
+	virtual inline  size_t sizeImpl() const;
+	
+	virtual inline  void clearImpl();
 	
 public:
 	HashMap();
 	HashMap(const std::initializer_list<PairType>& lInit);
 	HashMap(const HashMap<KeyT, T, hashFunction>& oSrc);
-	~HashMap();
+	virtual ~HashMap();
 	
-	ConstRefPairType find(HashFuncArgType tKey, ConstRefPairType oDefaultPair, size_t iPos = 0) const;
+	virtual ConstRefPairType find(HashFuncArgType tKey, ConstRefPairType oDefaultPair, size_t iPos = 0) const;
 	
-	EqualRangeType operator [] (HashFuncArgType tKey) const;
-	EqualRangeType equalRange(HashFuncArgType tKey, size_t iPos=0, size_t nCount=0) const;
+	virtual EqualRangeType operator [] (HashFuncArgType tKey) const;
+	virtual EqualRangeType equalRange(HashFuncArgType tKey, size_t iPos=0, size_t nCount=0) const;
 	
-	void insert(HashFuncArgType tKey, ConstRefType tValue);
-	void insert(ConstRefPairType pair); 
+	virtual void insert(HashFuncArgType tKey, ConstRefType tValue);
+	virtual void insert(ConstRefPairType pair); 
 	
-	PairType remove(HashFuncArgType tKey, ConstRefPairType oDefaultPair, size_t iPos = 0);
+	virtual EqualRangeType remove(HashFuncArgType tKey, size_t iPos = 0, size_t nCount = 0);
 	
-	void extend(const size_t iNewCapacity);
+	virtual void extend(const size_t iNewCapacity);
 	
-	bool 		empty() const { return !size(); } 
-	size_t		capacity() const { return m_iCapacity; }
-	bool		isDefaultPair(RefPairType oPair, RefPairType oDefaultPair);
-	size_t 		size() const;
+	virtual bool 	empty() const;
+	virtual size_t	capacity() const;
+	virtual size_t 	size() const;
 	
-	void clear();
+	virtual void clear();
+	
+	virtual size_t defaultCapacity() { return DEFAULT_CAPACITY; }
 };
 
 #define HM_TEMPLATE_DECL \
@@ -129,29 +147,29 @@ template <\
 #define cell_is_free(cell) !cell
 #define cell_is_busy(cell) cell
 
-#define is_valid_hash(h) h < m_iCapacity
-#define is_invalid_hash(h) h >= m_iCapacity
+#define is_valid_hash(h) h < m_nCapacity
+#define is_invalid_hash(h) h >= m_nCapacity
 
 HM_TEMPLATE_DECL THashMap::HashMap() 
 {
-	m_iCapacity = DEFAULT_CAPACITY;	
+	m_nCapacity = DEFAULT_CAPACITY;	
 	
-	m_vHashTable = new PtrPairType[m_iCapacity];
-	std::memset(m_vHashTable, 0, sizeof(PtrPairType) * m_iCapacity);
+	m_vHashTable = new SharedPtrPairType[m_nCapacity];
+	std::memset(m_vHashTable, 0, sizeof(SharedPtrPairType) * m_nCapacity);
 }
 
 HM_TEMPLATE_DECL THashMap::HashMap(const std::initializer_list<THashMap::PairType>& lInit) 
 {
-	m_iCapacity = DEFAULT_CAPACITY;	
+	m_nCapacity = DEFAULT_CAPACITY;	
 	
 	typedef std::initializer_list<PairType> InitList;
 	typename InitList::iterator it_l = lInit.begin(), it_end = lInit.end();
 	
 	size_t iIterDistance = std::distance(it_l, it_end);
-	m_iCapacity = (iIterDistance > m_iCapacity) ? iIterDistance + DEFAULT_CAPACITY : m_iCapacity;
+	m_nCapacity = (iIterDistance > m_nCapacity) ? iIterDistance + DEFAULT_CAPACITY : m_nCapacity;
 	
-	m_vHashTable = new PairType*[m_iCapacity];
-	std::memset(m_vHashTable, 0, sizeof(PtrPairType) * m_iCapacity);
+	m_vHashTable = new SharedPtrPairType[m_nCapacity];
+	std::memset(m_vHashTable, 0, sizeof(SharedPtrPairType) * m_nCapacity);
 	
 	for(; it_l != it_end; ++it_l)
 	{
@@ -161,13 +179,13 @@ HM_TEMPLATE_DECL THashMap::HashMap(const std::initializer_list<THashMap::PairTyp
 
 HM_TEMPLATE_DECL THashMap::HashMap(const THashMap& oSrc) 
 {	
-	m_iCapacity = oSrc.m_iCapacity;	
-	m_vHashTable = new PairType*[m_iCapacity];
+	m_nCapacity = oSrc.m_nCapacity;	
+	m_vHashTable = new SharedPtrPairType[m_nCapacity];
 	
-	for(size_t i = 0; i < m_iCapacity; ++i)
+	for(size_t i = 0; i < m_nCapacity; ++i)
 	{
 		if (oSrc.m_vHashTable[i])
-			m_vHashTable[i] = new PairType((*oSrc.m_vHashTable[i]));
+			m_vHashTable[i] = oSrc.m_vHashTable[i];
 		else
 			m_vHashTable[i] = nullptr;
 	}
@@ -175,14 +193,7 @@ HM_TEMPLATE_DECL THashMap::HashMap(const THashMap& oSrc)
 
 HM_TEMPLATE_DECL THashMap::~HashMap()
 {
-	clear();
 	delete [] m_vHashTable;
-}
-
-HM_TEMPLATE_DECL
-bool THashMap::isDefaultPair(RefPairType oPair, RefPairType oDefaultPair) 
-{
-	return key(oPair) == key(oDefaultPair) && value(oPair) == value(oDefaultPair); 
 }
 
 HM_TEMPLATE_DECL 
@@ -192,12 +203,12 @@ hash_t THashMap::findHashOfBusyCell(const typename THashMap::HashFuncArgType tKe
 	size_t iHits = 0;
 	hash_t h;
 			
-	if (iPos >= m_iCapacity) return m_iCapacity;
+	if (iPos >= m_nCapacity) return m_nCapacity;
 	++iPos;	
 	
-	for(size_t ik = 0; ik < m_iCapacity; ++ik)
+	for(size_t ik = 0; ik < m_nCapacity; ++ik)
 	{
-		h = hashFunction(m_iCapacity, tKey, ik);
+		h = hashFunction(m_nCapacity, tKey, ik);
 		if (cell_is_free(m_vHashTable[h]) || key_ptr(m_vHashTable[h]) != tKey)
 			continue;
 		
@@ -208,14 +219,12 @@ hash_t THashMap::findHashOfBusyCell(const typename THashMap::HashFuncArgType tKe
 		}
 	}
 	
-	return m_iCapacity;
+	return m_nCapacity;
 }
 
 HM_TEMPLATE_DECL
 typename THashMap::ConstRefPairType 
-THashMap::find(
-	THashMap::HashFuncArgType tKey, THashMap::ConstRefPairType oDefault, size_t iPos
-) const 
+THashMap::findImpl(THashMap::HashFuncArgType tKey, THashMap::ConstRefPairType oDefaultPair, size_t iPos) const 
 {
 	ReadLockType	lReadLock(m_mSharedMutex);
 		
@@ -223,16 +232,25 @@ THashMap::find(
 	if (is_valid_hash(h) && key_ptr(m_vHashTable[h]) == tKey) {
 		return *m_vHashTable[h];
 	} else {
-		return oDefault;
+		return oDefaultPair;
 	}
+}
+
+HM_TEMPLATE_DECL
+typename THashMap::ConstRefPairType 
+THashMap::find(THashMap::HashFuncArgType tKey, THashMap::ConstRefPairType oDefaultPair, size_t iPos) const 
+{
+	ReadLockType	lReadLock(m_mSharedMutex);
+	
+	return findImpl(tKey, oDefaultPair, iPos);
 }
 
 HM_TEMPLATE_DECL
 size_t THashMap::equalRangeImpl(typename THashMap::HashFuncArgType tKey, typename THashMap::EqualRangeType& lOut) const 
 {	
 	size_t ik = 0;
-	for(; ik < m_iCapacity; ++ik) {
-		hash_t h = hashFunction(m_iCapacity, tKey, ik);
+	for(; ik < m_nCapacity; ++ik) {
+		hash_t h = hashFunction(m_nCapacity, tKey, ik);
 		if (cell_is_free(m_vHashTable[h]) || key_ptr(m_vHashTable[h]) != tKey)
 			continue;
 		
@@ -252,8 +270,8 @@ size_t THashMap::equalRangeImplForPos(
 {	
 	++iPos;
 	size_t ik = 0, iHits = 0;
-	for(; ik < m_iCapacity; ++ik) {
-		hash_t h = hashFunction(m_iCapacity, tKey, ik);
+	for(; ik < m_nCapacity; ++ik) {
+		hash_t h = hashFunction(m_nCapacity, tKey, ik);
 		if (cell_is_free(m_vHashTable[h]) || key_ptr(m_vHashTable[h]) != tKey)
 			continue;
 		
@@ -276,8 +294,7 @@ typename THashMap::EqualRangeType
 THashMap::equalRange(const typename THashMap::HashFuncArgType tKey, size_t iPos, size_t nCount) const 
 {	
 	ReadLockType	lReadLock(m_mSharedMutex);
-	
-	EqualRangeType lEqualRange;
+	EqualRangeType 	lEqualRange;
 	
 	if (!iPos && !nCount) {
 		equalRangeImpl(tKey, lEqualRange);
@@ -285,7 +302,7 @@ THashMap::equalRange(const typename THashMap::HashFuncArgType tKey, size_t iPos,
 		equalRangeImplForPos(tKey, iPos, nCount, lEqualRange);
 	}
 		
-	return lEqualRange;
+	return std::move(lEqualRange);
 }
 
 HM_TEMPLATE_DECL 
@@ -293,31 +310,37 @@ typename THashMap::EqualRangeType
 THashMap::operator [] (const typename THashMap::HashFuncArgType tKey) const 
 {
 	ReadLockType	lReadLock(m_mSharedMutex);
-	EqualRangeType lEqualRange;
+	EqualRangeType 	lEqualRange;
 	
 	equalRangeImpl(tKey, lEqualRange);
-	return lEqualRange;
+	return std::move(lEqualRange);
+}
+
+HM_TEMPLATE_DECL  
+void THashMap::insertImpl(const typename THashMap::HashFuncArgType tKey, typename THashMap::ConstRefType tValue)
+{
+	hash_t h;
+	while(true) 
+	{
+		for(size_t ik = 0; ik < m_nCapacity; ++ik) 
+		{
+			h = hashFunction(m_nCapacity, tKey, ik);
+			if (cell_is_free(m_vHashTable[h])) {
+				m_vHashTable[h] = std::make_shared<PairType>(PairType(tKey, tValue));
+				return;
+			}
+		}
+		
+		extendImpl(m_nCapacity + DEFAULT_CAPACITY);
+	}
 }
 
 HM_TEMPLATE_DECL  
 void THashMap::insert(const typename THashMap::HashFuncArgType tKey, typename THashMap::ConstRefType tValue)
 {
 	WriteLockType	lWriteLock(m_mSharedMutex);
-	hash_t h;
-		
-	while(true) 
-	{
-		for(size_t ik = 0; ik < m_iCapacity; ++ik) 
-		{
-			h = hashFunction(m_iCapacity, tKey, ik);
-			if (cell_is_free(m_vHashTable[h])) {
-				m_vHashTable[h] = new PairType(tKey, tValue);
-				return;
-			}
-		}
-		
-		extendImpl(m_iCapacity + DEFAULT_CAPACITY);
-	}
+	
+	insertImpl(tKey, tValue);
 }
 
 HM_TEMPLATE_DECL
@@ -325,6 +348,32 @@ void THashMap::insert(typename THashMap::ConstRefPairType pair)
 {
 	insert(key(pair), value(pair));
 }
+
+HM_TEMPLATE_DECL 
+void THashMap::removeImpl(	
+	const typename THashMap::HashFuncArgType 	tKey,
+	size_t 										iPos,
+	size_t										nCount,
+	THashMap::EqualRangeType&					lOut
+) {
+	++iPos;
+	if (!nCount) nCount = m_nCapacity - 1;
+	size_t ik = 0, iHits = 0;
+	for(; ik < m_nCapacity; ++ik) {
+		hash_t h = hashFunction(m_nCapacity, tKey, ik);
+		if (cell_is_free(m_vHashTable[h]) || key_ptr(m_vHashTable[h]) != tKey)
+			continue;
+		
+		++iHits;
+		
+		if (iHits < iPos) {
+			continue;
+		} else if (iHits - iPos < nCount) {
+			lOut.push_back(m_vHashTable[h]);
+			m_vHashTable[h] = nullptr;
+		}
+	}
+} 
 
 HM_TEMPLATE_DECL
 typename THashMap::EqualRangeType 
@@ -334,40 +383,28 @@ THashMap::remove(
 	size_t										nCount
 ) {
 	WriteLockType	lWriteLock(m_mSharedMutex);
+	EqualRangeType	lEqualRange;
 	
-	++iPos;
-	size_t ik = 0, iHits = 0;
-	for(; ik < m_iCapacity; ++ik) {
-		hash_t h = hashFunction(m_iCapacity, tKey, ik);
-		if (cell_is_free(m_vHashTable[h]) || key_ptr(m_vHashTable[h]) != tKey)
-			continue;
-		
-		++iHits;
-		
-		if (iHits < iPos) {
-			continue;
-		} else if (nCount && iHits - iPos == nCount) {
-			return ik;
-		}
-		
-		lOut.push_back(m_vHashTable[h]);
-	}
+	removeImpl(tKey, iPos, nCount, lEqualRange);
+	
+	return std::move(lEqualRange);
 }
+
 // this realization don't use insert, because insert used KeyT and T copy constructors
 // so, we just copy pointers to pairs to new hash table
 HM_TEMPLATE_DECL
 void THashMap::extendImpl(const size_t iNewCapacity)
 {	
-	if (iNewCapacity <= m_iCapacity)
+	if (iNewCapacity <= m_nCapacity)
 		return;
 		
-	HashTableType vNewHashTable = new PtrPairType[iNewCapacity];
-	std::memset(vNewHashTable, 0, sizeof(PtrPairType) * iNewCapacity);
+	HashTableType vNewHashTable = new SharedPtrPairType[iNewCapacity];
+	std::memset(vNewHashTable, 0, sizeof(SharedPtrPairType) * iNewCapacity);
 	
 	DanglingChainRangeType lDanglingChain;
-	buildDanglingChain(lDanglingChain);
+	restoreDanglingChain(lDanglingChain);
 		
-	for(size_t i = 0; i < m_iCapacity; ++i)
+	for(size_t i = 0; i < m_nCapacity; ++i)
 	{
 		if (cell_is_free(m_vHashTable[i]))
 			continue;
@@ -397,15 +434,16 @@ void THashMap::extendImpl(const size_t iNewCapacity)
 	}
 	
 	delete [] m_vHashTable;
+	
 	m_vHashTable = vNewHashTable;
-	m_iCapacity = iNewCapacity;	
+	m_nCapacity = iNewCapacity;	
 }
 
 HM_TEMPLATE_DECL
 void THashMap::extend(const size_t iNewCapacity)
 {
 	WriteLockType	lWriteLock(m_mSharedMutex);
-	extend(iNewCapacity);
+	extendImpl(iNewCapacity);
 }
 
 
@@ -418,17 +456,20 @@ ptr = nullptr;
 l_out.push_back(ptr);\
 ptr = nullptr;
 
+// During extend operation, it may be that for elements that are at the end of the allocated memory, their collision chain may continue at the beginning, this may violate the insertion order during extend operation.
+// To prevent this from happening, during extend(), need to collect such a chain and insert it after the rest of the data of the rehashed table
+
 HM_TEMPLATE_DECL
-void THashMap::buildDanglingChain(THashMap::DanglingChainRangeType& lOut)
+void THashMap::restoreDanglingChain(THashMap::DanglingChainRangeType& lOut)
 {
 	hash_t 	iFirst = firstIndex(),
 			iLast = lastIndex();
 			
-	if (iFirst == iLast || iFirst == m_iCapacity || iLast == m_iCapacity)
+	if (iFirst == iLast || iFirst == m_nCapacity || iLast == m_nCapacity)
 		return;
 	
-	hash_t 	hFirst = hashFunction(m_iCapacity, key_ptr(m_vHashTable[iFirst]), 0),
-			hLast = hashFunction(m_iCapacity, key_ptr(m_vHashTable[iFirst]), 0);
+	hash_t 	hFirst = hashFunction(m_nCapacity, key_ptr(m_vHashTable[iFirst]), 0),
+			hLast = hashFunction(m_nCapacity, key_ptr(m_vHashTable[iFirst]), 0);
 			
 	if (hFirst != hLast)
 		return;
@@ -436,7 +477,7 @@ void THashMap::buildDanglingChain(THashMap::DanglingChainRangeType& lOut)
 	move_last(lOut, m_vHashTable[iLast])
 	for(hash_t i = iLast - 1; i != iFirst; --i)
 	{
-		if (!m_vHashTable[i] || hashFunction(m_iCapacity, key_ptr(m_vHashTable[i]), 0) != hLast)
+		if (!m_vHashTable[i] || hashFunction(m_nCapacity, key_ptr(m_vHashTable[i]), 0) != hLast)
 			break;
 		
 		move_last(lOut, m_vHashTable[i])
@@ -445,7 +486,7 @@ void THashMap::buildDanglingChain(THashMap::DanglingChainRangeType& lOut)
 	move_first(lOut, m_vHashTable[iFirst])
 	for(hash_t i = iFirst + 1; i != iLast; ++i)
 	{
-		if (!m_vHashTable[i] || hashFunction(m_iCapacity, key_ptr(m_vHashTable[i]), 0) != hFirst)
+		if (!m_vHashTable[i] || hashFunction(m_nCapacity, key_ptr(m_vHashTable[i]), 0) != hFirst)
 			break;
 		
 		move_first(lOut, m_vHashTable[i])
@@ -456,53 +497,84 @@ void THashMap::buildDanglingChain(THashMap::DanglingChainRangeType& lOut)
 #undef move_last
 
 HM_TEMPLATE_DECL
-size_t THashMap::size() {
+size_t THashMap::sizeImpl() const {
 	size_t n = 0;
-	for(size_t m = 0; m < m_iCapacity; ++m)
+	for(size_t m = 0; m < m_nCapacity; ++m)
 		n += static_cast<bool>(cell_is_busy(m_vHashTable[m]));
 
 	return n;
 }
 
 HM_TEMPLATE_DECL
-hash_t THashMap::firstIndex() {
-	hash_t i = 0;
-	for(; i < m_iCapacity; ++i) {
-		if(m_vHashTable[i])
-			return i;
-	}
-	return m_iCapacity;
+size_t THashMap::size() const {
+	ReadLockType lReadLock(m_mSharedMutex);
+	
+	return sizeImpl();
 }
 
 HM_TEMPLATE_DECL
-hash_t THashMap::lastIndex() {
-	hash_t i = m_iCapacity - 1;
+bool THashMap::emptyImpl() const {
+	return firstIndex() >= m_nCapacity;
+}
+
+HM_TEMPLATE_DECL
+bool THashMap::empty() const {
+	ReadLockType lReadLock(m_mSharedMutex);
+	
+	return emptyImpl();
+}
+
+HM_TEMPLATE_DECL
+size_t THashMap::capacity() const 
+{
+	ReadLockType	lReadLock(m_mSharedMutex);
+	
+	return m_nCapacity;
+}
+
+HM_TEMPLATE_DECL
+hash_t THashMap::firstIndex() const {
+	hash_t i = 0;
+	for(; i < m_nCapacity; ++i) {
+		if(m_vHashTable[i])
+			return i;
+	}
+	return m_nCapacity;
+}
+
+HM_TEMPLATE_DECL
+hash_t THashMap::lastIndex() const {	
+	hash_t i = m_nCapacity - 1;
 	for(; i >= 0; --i) {
 		if(m_vHashTable[i])
 			return i;
 	}
-	return m_iCapacity;
+	return m_nCapacity;
+}
+
+HM_TEMPLATE_DECL void THashMap::clearImpl()
+{
+	delete [] m_vHashTable;
+	m_nCapacity = DEFAULT_CAPACITY;
+	
+	m_vHashTable = new SharedPtrPairType[m_nCapacity];
 }
 
 HM_TEMPLATE_DECL void THashMap::clear()
 {
-	for(size_t i = 0; i < m_iCapacity; ++i)
-	{
-		if (m_vHashTable[i]) {
-			delete m_vHashTable[i];
-			m_vHashTable[i] = 0;
-		}
-	}
-	m_vHashTable = nullptr;
-	m_iCapacity = 0;
+	WriteLockType lWriteLock(m_mSharedMutex);
+	
+	clearImpl();
 }
 
 #undef key
 #undef value
-#undef ptr
-#undef hash
+#undef key_ptr
+#undef value_ptr
 #undef cell_is_free
 #undef cell_is_busy
+#undef is_invalid_hash
+#undef is_valid_hash
 #undef HM_TEMPLATE_DECL
 #undef THashMap
 #undef DEFAULT_CAPACITY
