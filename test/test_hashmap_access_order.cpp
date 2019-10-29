@@ -50,10 +50,12 @@ int main()
 		it_er_end = lEqualRange.end();
 		for(it_er = lEqualRange.begin(), iPos = 0; it_er != lEqualRange.end(); ++it_er, ++iPos)
 		{
+			HashMapInt::SharedPtrPairType pErPair = it_er->lock();
 			oExpectedPair = PairType(i, (i * 10 + iPos));
-			bResult = (**it_er == oExpectedPair);
+			
+			bResult = (*pErPair == oExpectedPair);
 			if (!bResult)
-				PRT_PAIR_CHK_FAIL((**it_er), oExpectedPair, iPos);
+				PRT_PAIR_CHK_FAIL((*pErPair), oExpectedPair, iPos);
 			
 			// checking subreange
 			nExpectedCount = (10 - iPos >= 4) ? 4 : 10 - iPos;
@@ -69,24 +71,29 @@ int main()
 				it_sr != it_sr_end; 
 				++it_sr, ++k
 			) {
+				
 				oExpectedPair = PairType(i, (i * 10 + k));
-				bFindResult = ((**it_sr) == oExpectedPair);
+				HashMapInt::SharedPtrPairType pEsrPair = it_sr->lock();
+				
+				bFindResult = ((*pEsrPair) == oExpectedPair);
 				
 				if (!bFindResult)
-					PRT_PAIR_CHK_FAIL((**it_sr), oExpectedPair, k);
+					PRT_PAIR_CHK_FAIL((*pEsrPair), oExpectedPair, k);
 			}
 			
 		}
 		bResult = bFindResult && bResult;
 		
- 		lEqualRange = oshMap[i];
+ 		lEqualRange = oHashMap[i];
 		it_er_end = lEqualRange.end();
 		for(it_er = lEqualRange.begin(), iPos = 0; it_er != lEqualRange.end(); ++it_er, ++iPos)
 		{
 			oExpectedPair = PairType(i, (i * 10 + iPos));
-			bResult = (**it_er == oExpectedPair);
+			HashMapInt::SharedPtrPairType pErPair = it_er->lock();
+			
+			bResult = (*pErPair == oExpectedPair);
 			if (!bResult)
-				PRT_PAIR_CHK_FAIL((**it_er), oExpectedPair, iPos);
+				PRT_PAIR_CHK_FAIL((*pErPair), oExpectedPair, iPos);
 		}
 	}
 	

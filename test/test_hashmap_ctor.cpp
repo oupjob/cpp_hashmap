@@ -56,7 +56,7 @@ int main()
 	iStatus = (!bResult || iStatus);
 	CHK_PRT_SZ_CP_RESULT("Test Copy ctor: ", bResult, iStatus, iSize, iCapacity, 3, "> 0")
 	
-	cout << "NOTE:    " << "Check clean() method" << endl;
+	cout << "NOTE:    " << "Check clear() method" << endl;
 	oHashMap2.clear();
 	iSize = oHashMap2.size();
 	iCapacity = oHashMap2.capacity();
@@ -70,6 +70,20 @@ int main()
 	bResult = (iSize == 3 && iCapacity > 0);
 	iStatus = (!bResult || iStatus);
 	CHK_PRT_SZ_CP_RESULT("Test Copy after source clean: ", bResult, iStatus, iSize, iCapacity, 3, "> 0")
+	
+	cout << "NOTE:    " << "Checking move ctor" << endl;
+	HashMapInt oHashMap4(std::move(oHashMap3));
+	iSize = oHashMap4.size();
+	iCapacity = oHashMap4.capacity();
+	bResult = (iSize == 3 && iCapacity > 0);
+	iStatus = (!bResult || iStatus);
+	CHK_PRT_SZ_CP_RESULT("Test move ctor: ", bResult, iStatus, iSize, iCapacity, 3, "> 0")
+	
+	iSize = oHashMap3.size();
+	iCapacity = oHashMap3.capacity();
+	bResult = (iSize == 0 && iCapacity == 0);
+	iStatus = (!bResult || iStatus);
+	CHK_PRT_SZ_CP_RESULT("Test source after move ctor: ", bResult, iStatus, iSize, iCapacity, 3, 0)
 	
 	return iStatus;
 }
