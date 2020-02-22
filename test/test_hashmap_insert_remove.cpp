@@ -30,13 +30,14 @@ double my_log(double x, double base)
 	return std::log(x) / std::log(base);
 }
 		
-typedef HashMap<int, long long> HashMapIntLLong;
-typedef HashMapIntLLong::PairType 	PairType;
-typedef HashMapIntLLong::EqualRangeType EqualRangeType;
-typedef HashMapIntLLong::ConstRefPairType ConstRefPairType;
+typedef HashMap<int, long long> 			HashMapIntLLong;
+typedef HashMapIntLLong::PairType 			PairType;
+typedef HashMapIntLLong::EqualRangeType 	EqualRangeType;
+typedef HashMapIntLLong::ConstRefPairType 	ConstRefPairType;
+typedef HashMapIntLLong::RemovedRangeType 	RemovedRangeType;
 		
 size_t checkRemovedEqualRange(
-	const EqualRangeType& 	lRemovedEqualRange,
+	const RemovedRangeType& lRemovedEqualRange,
 	int 					iExpectedKey,
 	int 					j,
 	int						k,
@@ -47,10 +48,11 @@ size_t checkRemovedEqualRange(
 {
 	PairType oExpectedPair, oDefaultPair(12345678, 12345678);
 	
-	EqualRangeType::const_iterator 
+	RemovedRangeType::const_iterator 
 		it_ch		= lRemovedEqualRange.begin(), 
-		it_ch_end	= lRemovedEqualRange.end(),
-		it_er;
+		it_ch_end	= lRemovedEqualRange.end();
+		
+	EqualRangeType::const_iterator it_er;
 		
 	EqualRangeType 	lFoundEqualRange = oHashMap.equalRange(iExpectedKey, iPos, nExpectedLen), 
 					lFoundEqualRangeOp = oHashMap[iExpectedKey];
@@ -64,7 +66,7 @@ size_t checkRemovedEqualRange(
 	{
 		oExpectedPair = PairType(iExpectedKey, iExpectedKey * 10 + k);
 			
-		HashMapIntLLong::SharedPtrPairType pChPair = it_ch->lock();
+		HashMapIntLLong::SharedPtrPairType pChPair = *it_ch;
 		
 		bEqResult = (*pChPair == oExpectedPair);
 		if (!bEqResult) {
@@ -121,7 +123,7 @@ int main()
 	bool 				bResult, bRemoveResult;
 	string 				sStatus;
 	size_t				nRemovedCount, iPos;
-	EqualRangeType		lRemovedEqualRange;
+	RemovedRangeType	lRemovedEqualRange;
 	HashMapIntLLong 	oHashMap;
 	size_t 				nExpectedLen;
 	

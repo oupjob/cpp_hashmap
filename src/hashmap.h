@@ -72,6 +72,7 @@ public:
 	typedef const WeakPtrPairType&					ConstRefWeakPtrPairType;
 	
 	typedef std::list<WeakPtrPairType> 				EqualRangeType;
+	typedef std::list<SharedPtrPairType>			RemovedRangeType;
 	
 	typedef std::shared_lock<std::shared_mutex>		ReadLockType;
 	typedef std::lock_guard<std::shared_mutex>		WriteLockType;
@@ -94,7 +95,7 @@ protected:
 	virtual inline size_t equalRangeImplForPos(HashFuncArgType tKey, size_t iPos, size_t nCount, EqualRangeType& lOut) const;
 	
 	virtual inline void insertImpl(HashFuncArgType tKey, ConstRefType tValue);
-	virtual inline void removeImpl(HashFuncArgType tKey, size_t iPos, size_t nCount, EqualRangeType& lOut);
+	virtual inline void removeImpl(HashFuncArgType tKey, size_t iPos, size_t nCount, RemovedRangeType& lOut);
 	
 	virtual inline void extendImpl(const size_t nNewCapacity);	
 	virtual inline  bool emptyImpl() const;
@@ -117,7 +118,7 @@ public:
 	virtual void insert(HashFuncArgType tKey, ConstRefType tValue);
 	virtual void insert(ConstRefPairType pair); 
 	
-	virtual EqualRangeType remove(HashFuncArgType tKey, size_t iPos = 0, size_t nCount = 0);
+	virtual RemovedRangeType remove(HashFuncArgType tKey, size_t iPos = 0, size_t nCount = 0);
 	
 	virtual void extend(const size_t nNewCapacity);
 	
@@ -364,7 +365,7 @@ void THashMap::removeImpl(
 	const typename THashMap::HashFuncArgType 	tKey,
 	size_t 										iPos,
 	size_t										nCount,
-	THashMap::EqualRangeType&					lOut
+	THashMap::RemovedRangeType&					lOut
 ) {
 	++iPos;
 	if (!nCount) nCount = m_nCapacity - 1;
@@ -374,9 +375,7 @@ void THashMap::removeImpl(
 		if (cell_is_free(m_vHashTable[h]) || key_ptr(m_vHashTable[h]) != tKey)
 			continue;
 		
-		++iHits;
-		
-		if (iHits < iPos) {
+		if (++iHits < iPos) {
 			continue;
 		} else if (iHits - iPos < nCount) {
 			lOut.push_back(m_vHashTable[h]);
@@ -386,18 +385,18 @@ void THashMap::removeImpl(
 } 
 
 HM_TEMPLATE_DECL
-typename THashMap::EqualRangeType 
+typename THashMap::RemovedRangeType 
 THashMap::remove(
 	const typename THashMap::HashFuncArgType 	tKey,
 	size_t 										iPos,
 	size_t										nCount
 ) {
-	WriteLockType	lWriteLock(m_mSharedMutex);
-	EqualRangeType	lEqualRange;
+	WriteLockType		lWriteLock(m_mSharedMutex);
+	RemovedRangeType	lRemovedRange;
 	
-	removeImpl(tKey, iPos, nCount, lEqualRange);
+	removeImpl(tKey, iPos, nCount, lRemovedRange);
 	
-	return std::move(lEqualRange);
+	return lRemovedRange;
 }
 
 // this realization don't use insert, because insert used KeyT and T copy constructors

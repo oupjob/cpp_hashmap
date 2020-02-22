@@ -15,6 +15,8 @@
 // DATA STRUCTURES +============================================================================
 //  +===========================================================================================
 
+typedef unsigned int uint;
+
 enum OperationType {
 	UNKNOWN			= 0,
 	
@@ -52,6 +54,8 @@ class ThreadSafetyTestableHashMap;
 typedef HashMap<int, int>				HashMapInt;
 typedef HashMapInt::PairType			PairType;
 typedef HashMapInt::EqualRangeType		EqualRangeType;
+typedef HashMapInt::RemovedRangeType	RemovedRangeType;
+typedef HashMapInt::SharedPtrPairType	SharedPtrPairType;
 
 struct OperationTimingInt 
 {
@@ -120,7 +124,7 @@ struct RemoveOperationTiming : OperationTimingInt {
 	int					m_tKey;
 	size_t				m_iPos;
 	size_t				m_nCount;
-	EqualRangeType		m_lResult;
+	RemovedRangeType	m_lResult;
 	
 	RemoveOperationTiming() : OperationTimingInt(REMOVE) {}
 	
@@ -186,9 +190,9 @@ struct TSOperationTimingVector {
 	void clear();
 	void unlink();
 	
-	TSOperationTimingVector filterByType(OperationType kOperationType) const;
+	TSOperationTimingVector filterByType(ushort kOperationType) const;
 	TSOperationTimingVector filterParallelWorkers(const OperationTimingInt* oOpTiming) const;
-	TSOperationTimingVector filterParallelWorkersByType(const OperationTimingInt* oOpTiming, OperationType kOperationType) const;
+	TSOperationTimingVector filterParallelWorkersByType(const OperationTimingInt* oOpTiming, ushort kOperationType) const;
 	
 	TSOperationTimingVector& operator = (const TSOperationTimingVector& vSrc);
 	TSOperationTimingVector& operator = (TSOperationTimingVector&& vSrc);
@@ -263,7 +267,7 @@ void TSOperationTimingVector::unlink()
 	m_vOperationTimings.clear();
 }
 
-TSOperationTimingVector TSOperationTimingVector::filterByType(OperationType kOperationType) const
+TSOperationTimingVector TSOperationTimingVector::filterByType(ushort kOperationType) const
 {
 	TSOperationTimingVector vResult;
 	size_t nSize = m_vOperationTimings.size();
@@ -303,7 +307,7 @@ TSOperationTimingVector TSOperationTimingVector::filterParallelWorkers(const Ope
 
 TSOperationTimingVector TSOperationTimingVector::filterParallelWorkersByType(
 	const OperationTimingInt* 	oOpTiming, 
-	OperationType 				kOperationType
+	ushort 						kOperationType
 ) const {
 	TSOperationTimingVector vResult;
 	size_t nSize = m_vOperationTimings.size();
@@ -402,6 +406,7 @@ public:
 	typedef typename BaseHashMap::ConstRefWeakPtrPairType	ConstRefWeakPtrPairType;
 	
 	typedef typename BaseHashMap::EqualRangeType 			EqualRangeType;
+	typedef typename BaseHashMap::RemovedRangeType			RemovedRangeType;
 	
 	typedef typename BaseHashMap::ReadLockType				ReadLockType;
 	typedef typename BaseHashMap::WriteLockType				WriteLockType;
@@ -424,7 +429,7 @@ public:
 	
 	void insert(HashFuncArgType tKey, ConstRefType tValue);
 	
-	EqualRangeType remove(HashFuncArgType tKey, size_t iPos = 0, size_t nCount = 0);
+	RemovedRangeType remove(HashFuncArgType tKey, size_t iPos = 0, size_t nCount = 0);
 	
 	void extend(const size_t nNewCapacity);
 	
@@ -545,7 +550,7 @@ void THashMap::insert(const typename THashMap::HashFuncArgType tKey, typename TH
 }
 
 HM_TEMPLATE_DECL
-typename THashMap::EqualRangeType 
+typename THashMap::RemovedRangeType 
 THashMap::remove(
 	const typename THashMap::HashFuncArgType 	tKey,
 	size_t 										iPos,
@@ -825,6 +830,10 @@ void findHashMapWorker(TSTHashMapInt& oHashMap, int tKey, size_t iPos, size_t nC
 
 void equalRangeHashMapWorker(TSTHashMapInt& oHashMap, int tKey, size_t iPos, size_t nCount)
 {
+	NOPE(tKey)
+	NOPE(iPos)
+	NOPE(nCount)
+	
 	oHashMap.equalRange(tKey, iPos, nCount);
 }
 
@@ -849,10 +858,10 @@ void insertHashMapWorker(TSTHashMapInt& oHashMap, int tKey, size_t iPos, size_t 
 void removeHashMapWorker(TSTHashMapInt& oHashMap, int tKey, size_t iPos, size_t	nCount) 
 {	
 	NOPE(tKey)
-	NOPE(iPos)
-	NOPE(nCount)
+	UNUSED_ARG(iPos)
+	UNUSED_ARG(nCount)
 	
-	oHashMap.remove(tKey, iPos, nCount);
+	oHashMap.remove(tKey, 0, 1);
 }
 
 void extendHashMapWorker(TSTHashMapInt& oHashMap, int tKey, size_t iPos, size_t	nCount)
@@ -902,14 +911,17 @@ void clearHashMapWorker(TSTHashMapInt& oHashMap, int tKey, size_t iPos, size_t	n
 // CHECKERS +===================================================================================
 //  +===========================================================================================
 
-bool checkLockTimes(const TSOperationTimingVector& vTSOpTimings)
+bool checkLockTimes(TSOperationTimingVector& vTSOpTimings)
 {
 	using namespace std;
 	
 	bool bResult = true;
 	
+	vTSOpTimings.sortByEndTimeAsc();
+	
 	size_t 	nTSOpTimings = vTSOpTimings.size(), 
 			jLastWrite;
+			
 	for(size_t i = 0; i < nTSOpTimings; ++i)
 	{
 		TSOperationTimingVector vParallels = vTSOpTimings.filterParallelWorkers(vTSOpTimings[i]);
@@ -962,7 +974,8 @@ bool checkLockTimes(const TSOperationTimingVector& vTSOpTimings)
 						}
 					}
 				}
-			} 
+			}
+			
 			else if (vTSOpTimings[i]->m_kOperationType & READ_OPS) 
 			{
 				if (vParallels[j]->m_kOperationType & WRITE_OPS) {
@@ -1033,25 +1046,32 @@ bool checkLockTimes(const TSOperationTimingVector& vTSOpTimings)
 
 typedef std::list<std::thread>			ThreadList;
 
-template <typename WriteWorkerFunction>
-void runWriteAndFindThreads(
+template <typename WorkerFunction>
+void runWorkerAndFindThreads(
 	_INOUT TSTHashMapInt& 	oHashMap, 
 	_IN int 				iStartKey, 
 	_IN int 				iEndKey, 
 	_IN size_t 				nCount,
-	_IN WriteWorkerFunction	writeThreadWorker
+	_IN WorkerFunction		threadWorker,
+	_IN bool				bInsertBeforeStarting = false
 ) {
 	ThreadList lThreads;
-	std::random_device oRandom;
-	TSTHashMapInt::PairType oDefaultPair(12345678, 12345678);
-	// run
+	
+	if (bInsertBeforeStarting) 
+	{
+		for(int iKey = iStartKey; iKey <= iEndKey; ++iKey) 
+		{
+			for(size_t k = 0; k < nCount; ++k)
+			{
+				oHashMap.insert(iKey, iKey * 10 + k);
+			}
+		}
+	}
+	
 	for(int iKey = iStartKey; iKey <= iEndKey; ++iKey) 
 	{
-		size_t iPos = 0, iPrevPos;
-		bool bEnd = false;
-		while(iPos < nCount)
+		for(size_t iPos = 0; iPos < nCount - 1; ++iPos)
 		{
-			iPrevPos = (iPos) ? iPos - 1 : iPos;
 			lThreads.push_back(
 				std::thread(findHashMapWorker, std::ref(oHashMap), iKey, iPos, nCount)
 			);
@@ -1060,13 +1080,11 @@ void runWriteAndFindThreads(
 			);
 			lThreads.push_back(std::thread(equalRangeQHashMapWorker, std::ref(oHashMap), iKey, iPos, nCount));
 			
-			lThreads.push_back(std::thread(writeThreadWorker, std::ref(oHashMap), iKey, iPos, nCount));
+			lThreads.push_back(std::thread(threadWorker, std::ref(oHashMap), iKey, iPos, nCount));
 			
 			lThreads.push_back(std::thread(findHashMapWorker, std::ref(oHashMap), iKey, iPos, nCount));
 			lThreads.push_back(std::thread(equalRangeHashMapWorker, std::ref(oHashMap), iKey, iPos, nCount));
 			lThreads.push_back(std::thread(equalRangeQHashMapWorker, std::ref(oHashMap), iKey, iPos, nCount));
-			
-			++iPos;
 		}
 	}
 	
@@ -1077,79 +1095,91 @@ void runWriteAndFindThreads(
 
 typedef unsigned char byte;
 
-struct CheckReadersFlags
+struct CheckFindersFlags
 {
 	enum Flags {
-		kReadBeforeResult			= 1,
-		kReadAfterResult			= kReadBeforeResult << 1,
-		kWriterHasNoReadersAfter	= kReadAfterResult << 1
+		kFoundBefore				= 1,
+		kFoundAfter					= kFoundBefore << 1,
+		kWriterHasNoFindersBefore	= kFoundAfter << 1,
+		kWriterHasNoFindersAfter	= kWriterHasNoFindersBefore << 1
 	};
 	
 	byte m_kFlags;
 	
-	CheckReadersFlags() : m_kFlags(kReadBeforeResult | kWriterHasNoReadersAfter) {}
+	CheckFindersFlags() : m_kFlags(kWriterHasNoFindersBefore | kWriterHasNoFindersAfter) {}
 	
 	operator bool () {
-		return (m_kFlags & (kReadBeforeResult | kReadAfterResult)) || (m_kFlags & (kReadBeforeResult | kWriterHasNoReadersAfter));
+		return (
+			(m_kFlags & (kFoundBefore | kFoundAfter | kWriterHasNoFindersBefore| kWriterHasNoFindersAfter))
+		);
 	}
 };
 
 #define COUT_PAIR(pair) " (" << pair.first << ", " << pair.second << ")"
 
-bool checkFindOpTimingForValue(
-	const TSOperationTimingVector& 		vWriters,
-	const TSOperationTimingVector&		vParallels,
-	size_t 								i,
-	size_t								j,
-	int									iValue,
-	CheckReadersFlags&					oFlags
+bool checkFindOpTimingForPair(
+	_IN const TSOperationTimingVector& 		vWriters,
+	_IN const TSOperationTimingVector&		vParallels,
+	_IN size_t 								i,
+	_IN size_t								j,
+	_IN PairType							oExpectedPair,
+	_INOUT CheckFindersFlags&				oFlags
 ) {
 	if (!(vParallels[j]->m_kOperationType & FIND))
 		return true;
 	
 	auto pFindOperationTiming = static_cast<const FindOperationTiming*>(vParallels[j]);
 	
-	std::string s;
-	s = pFindOperationTiming->m_tLockTime < vWriters[i]->m_tLockTime ? "<" : ">";
-	
+// 	std::string s;
+// 	s = pFindOperationTiming->m_tLockTime < vWriters[i]->m_tLockTime ? "<" : ">";
 // 	std::cout 	<< "checkFindOpTimingForValue: " << COUT_PAIR(pFindOperationTiming->m_oResult) 
 // 				<< ", ltr " << s << " ltw"
-// 				<< ", i = " << i << ", j = " << j << ", v = " << iValue
+// 				<< ", i = " << i << ", j = " << j << ", kv = " << COUT_PAIR(oExpectedPair)
 // 	<< std::endl;
-// 	
-	if (
-		(oFlags.m_kFlags & CheckReadersFlags::kReadBeforeResult) 		&&
-		pFindOperationTiming->m_tLockTime < vWriters[i]->m_tLockTime	&&
-		pFindOperationTiming->m_oResult.second == iValue
-	) {
-// 		std::cout << "Find before FAIL" << COUT_PAIR(pFindOperationTiming->m_oResult) << std::endl;
-		oFlags.m_kFlags ^= CheckReadersFlags::kReadBeforeResult;
-	}
-	
-	if (vParallels[j]->m_tLockTime > vWriters[i]->m_tLockTime)
-		oFlags.m_kFlags ^= CheckReadersFlags::kWriterHasNoReadersAfter;
 	
 	if (
-		!(oFlags.m_kFlags & CheckReadersFlags::kReadAfterResult) 			&&
-		!(oFlags.m_kFlags & CheckReadersFlags::kWriterHasNoReadersAfter)	&&
-		pFindOperationTiming->m_oResult.second == iValue
+		(oFlags.m_kFlags & CheckFindersFlags::kWriterHasNoFindersBefore) 	&& 
+		pFindOperationTiming->m_tLockTime < vWriters[i]->m_tLockTime
+	)
+		oFlags.m_kFlags ^= CheckFindersFlags::kWriterHasNoFindersBefore;
+	
+	if (
+		pFindOperationTiming->m_tLockTime < vWriters[i]->m_tLockTime		&&
+		pFindOperationTiming->m_oResult.first == oExpectedPair.first		&&
+		pFindOperationTiming->m_oResult.second == oExpectedPair.second
 	) {
-// 		std::cout << "Find after " << COUT_PAIR(pFindOperationTiming->m_oResult) << ", v=" << iValue << std::endl;
-		oFlags.m_kFlags |= CheckReadersFlags::kReadAfterResult;
+// 		std::cout << "Find FOUND BEFORE" << COUT_PAIR(pFindOperationTiming->m_oResult) << std::endl;
+		oFlags.m_kFlags |= CheckFindersFlags::kFoundBefore;
 	}
-	if (oFlags.m_kFlags & CheckReadersFlags::kWriterHasNoReadersAfter)
+	
+	if (
+		(oFlags.m_kFlags & CheckFindersFlags::kWriterHasNoFindersAfter) 	&& 
+		vParallels[j]->m_tLockTime > vWriters[i]->m_tLockTime
+	)
+		oFlags.m_kFlags ^= CheckFindersFlags::kWriterHasNoFindersAfter;
+	
+	if (
+		!(oFlags.m_kFlags & CheckFindersFlags::kFoundAfter) 				&&
+		vParallels[j]->m_tLockTime > vWriters[i]->m_tLockTime				&&
+		pFindOperationTiming->m_oResult.first == oExpectedPair.first		&&
+		pFindOperationTiming->m_oResult.second == oExpectedPair.second
+	) {
+// 		std::cout << "Find FOUND AFTER " << COUT_PAIR(pFindOperationTiming->m_oResult) << std::endl;
+		oFlags.m_kFlags |= CheckFindersFlags::kFoundAfter;
+	}
+// 	if (oFlags.m_kFlags & CheckFindersFlags::kWriterHasNoFindersAfter)
 // 		std::cout << "Writer Has No Readers after" << std::endl;
 
 	return oFlags;
 }
 
-bool checkErOpTimingForValue(
+bool checkErOpTimingForPair(
 	_IN const TSOperationTimingVector& 		vWriters,
 	_IN const TSOperationTimingVector&		vParallels,
 	_IN size_t 								i,
 	_IN size_t								j,
-	_IN int									iValue,
-	_INOUT CheckReadersFlags&				oFlags
+	_IN PairType							oExpectedPair,
+	_INOUT CheckFindersFlags&				oFlags
 ) {	
 	EqualRangeType::const_iterator it, it_end;
 	
@@ -1170,34 +1200,54 @@ bool checkErOpTimingForValue(
 		return true;
 	}
 		
+	std::string s = vParallels[j]->m_tLockTime < vWriters[i]->m_tLockTime ? "<" : ">";
 	it = std::find_if(
 		it, 
 		it_end, 
-		[iValue](TSTHashMapInt::ConstRefWeakPtrPairType pWeakPtrToPair) {
-			return pWeakPtrToPair.lock()->second == iValue;
+		[&oExpectedPair](TSTHashMapInt::ConstRefWeakPtrPairType pWeakPtrToPair) {
+			if (SharedPtrPairType pPair = pWeakPtrToPair.lock())
+				return pPair->first == oExpectedPair.first && pPair->second == oExpectedPair.second;
+			return false;
 		}
 	);
 	
+// 	std::cout 	<< "checkErOpTimingForValue: "
+// 				<< ", ltr " << s << " ltw"
+// 				<< ", i = " << i << ", j = " << j << ", kv = " << COUT_PAIR(oExpectedPair)
+// 	<< std::endl;
+// 	
 	if (
-		(oFlags.m_kFlags & CheckReadersFlags::kReadBeforeResult)	&&
-		vParallels[j]->m_tLockTime < vWriters[i]->m_tLockTime 		&&
+		(oFlags.m_kFlags & CheckFindersFlags::kWriterHasNoFindersBefore) 	&&
+		vParallels[j]->m_tLockTime < vWriters[i]->m_tLockTime
+	)
+		oFlags.m_kFlags ^= CheckFindersFlags::kWriterHasNoFindersBefore;
+	
+	if (
+		!(oFlags.m_kFlags & CheckFindersFlags::kFoundBefore)	&&
+		vParallels[j]->m_tLockTime < vWriters[i]->m_tLockTime 	&&
 		it != it_end
 	) {
-// 		std::cout << "Er Before FAIL" << COUT_PAIR((*(it->lock()))) << std::endl;
-		oFlags.m_kFlags ^= CheckReadersFlags::kReadBeforeResult;
+// 		std::cout << "Er FOUND BEFORE" << std::endl;
+		oFlags.m_kFlags |= CheckFindersFlags::kFoundBefore;
 	}
 	
-	if (vParallels[j]->m_tLockTime > vWriters[i]->m_tLockTime)
-		oFlags.m_kFlags ^= CheckReadersFlags::kWriterHasNoReadersAfter;
+	if (
+		(oFlags.m_kFlags & CheckFindersFlags::kWriterHasNoFindersAfter)		&&
+		vParallels[j]->m_tLockTime > vWriters[i]->m_tLockTime
+	)
+		oFlags.m_kFlags ^= CheckFindersFlags::kWriterHasNoFindersAfter;
 		
 	if (
-		!(oFlags.m_kFlags & CheckReadersFlags::kReadAfterResult) 			&&
-		!(oFlags.m_kFlags & CheckReadersFlags::kWriterHasNoReadersAfter)	&&
+		!(oFlags.m_kFlags & CheckFindersFlags::kFoundAfter) 		&&
+		vParallels[j]->m_tLockTime > vWriters[i]->m_tLockTime		&&
 		it != it_end
 	) {
-// 		std::cout << "Er After" << COUT_PAIR((*(it->lock()))) << std::endl;
-		oFlags.m_kFlags |= CheckReadersFlags::kReadAfterResult;
+// 		std::cout << "Er FOUND AFTER" << COUT_PAIR((*(it->lock()))) << std::endl;
+		oFlags.m_kFlags |= CheckFindersFlags::kFoundAfter;
 	}
+// 	if (oFlags.m_kFlags & CheckFindersFlags::kWriterHasNoFindersAfter)
+// 		std::cout << "Writer Has No Readers after" << std::endl;
+
 	
 	return oFlags;
 }
